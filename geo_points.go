@@ -1,4 +1,4 @@
-package geopoint
+package geopoints
 
 import (
 	"bytes"
