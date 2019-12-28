@@ -55,7 +55,3 @@ func GetUsersInDistanceRange(p geopoint.GeoPoint, d int64) []User {
 }
 
 ```
-
-## Licence
-
-MIT.
