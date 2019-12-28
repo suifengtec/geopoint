@@ -53,7 +53,7 @@ func initDBEngine() {
 	e, err := xorm.NewEngine("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal(err)
-		return nil
+
 	}
 	e.ShowSQL(true)
 
