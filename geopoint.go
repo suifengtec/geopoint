@@ -118,6 +118,5 @@ func PointsInDistanceRange(p GeoPoint, d int64) []Users {
 
 */
 func (p *GeoPoint) GetPointsQueryStringWithIn(d int64) string {
-
 	return fmt.Sprintf("ST_DWithin(geog::geography, ST_SetSRID(ST_MakePoint(%f, %f),4326)::geography, %d)", p.Lng, p.Lat, d)
 }
