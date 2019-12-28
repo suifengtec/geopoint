@@ -46,7 +46,11 @@ const (
 //X ...
 var X *xorm.Engine
 
-func getDBEngine() *xorm.Engine {
+func init() {
+	initDBEngine()
+}
+
+func initDBEngine() {
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
