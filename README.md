@@ -1,4 +1,5 @@
 # geopoint
+[![wercker status](https://app.wercker.com/status/3dac46658e067a895b21b697a61f5c60/s/master "wercker status")](https://app.wercker.com/project/byKey/3dac46658e067a895b21b697a61f5c60)
 
 geopoint is a go package to handle PostGIS point type.
 
