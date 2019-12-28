@@ -46,10 +46,6 @@ const (
 //X ...
 var X *xorm.Engine
 
-func init() {
-	initDBEngine()
-}
-
 func initDBEngine() {
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
@@ -171,6 +167,8 @@ func DeleteUserByPhone(phone string) bool {
 }
 
 func main() {
+
+	initDBEngine()
 	//total row in DT
 	{ //用户数量
 		total := GetUserCount()
