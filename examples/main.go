@@ -7,54 +7,66 @@ import (
 
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
-	geopoints "github.com/suifengtec/go-postgis-points"
+	"github.com/suifengtec/geopoint"
 )
 
-//Users ...
-type Users struct {
-	Id              uint64 `xorm:"pk" json:"id"`
-	ProvinceAgentId uint64 `json:"province_agent_id"`
-	CityAgentId     uint64 `json:"city_agent_id"`
-	CountyAgentId   uint64 `json:"county_agent_id"`
-	Name            string `json:"name"`
-	Phone           string `json:"phone"`
-	BizLevel        int8   `json:"biz_level"`
-	Role            int8   `json:"role"`
-	Grade           int8   `json:"grade"`
-	RefType         int8   `json:"ref_type"`
-	RefId           uint64 `json:"ref_id"`
-	Points          uint64 `json:"points"`
-	Geog            string `json:"geog"`
+//User Db Model
+type User struct {
+	ID       uint64 `xorm:"pk 'id'" json:"id"`
+	Name     string `json:"name"`
+	Phone    string `json:"phone"`
+	Password string `json:"password"` //only for test!!
+	Geog     string `json:"geog"`     //xorm 以及gorm 目前尚未支持PostGIS
 }
+
+/*
+
+psql -U postgres
+
+CREATE USER geopoint_test_user WITH PASSWORD 'geopoint_test_user_passsword';
+CREATE DATABASE geopoint_test_db;
+GRANT ALL PRIVILEGES ON DATABASE geopoint_test_db to geopoint_test_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO geopoint_test_user;
+
+\c geopoint_test_db
+
+CREATE EXTENSION postgis;
+psql -d geopoint_test_db < bk.sql
+
+*/
 
 const (
 	dbHost     = "localhost"
 	dbPort     = 5432
-	dbUser     = "ylbadmin"
-	dbPassword = "ylbadminpwd"
-	dbName     = "ylbdb01"
+	dbUser     = "geopoint_test_user"
+	dbPassword = "geopoint_test_user_passsword"
+	dbName     = "geopoint_test_db"
 )
+
+//X ...
+var X *xorm.Engine
 
 func getDBEngine() *xorm.Engine {
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
-	engine, err := xorm.NewEngine("postgres", psqlInfo)
+	e, err := xorm.NewEngine("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal(err)
 		return nil
 	}
-	engine.ShowSQL(true)
+	e.ShowSQL(true)
 
 	fmt.Println("connect postgresql success")
-	return engine
+	X = e
+	//return e
 }
 
 //GetUserCount ...
 func GetUserCount() uint64 {
-	engine := getDBEngine()
-	user := new(Users)
-	total, err := engine.Where("id >?", 1).Count(user)
+
+	user := new(User)
+	total, err := X.Where("id >?", 1).Count(user)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -63,20 +75,18 @@ func GetUserCount() uint64 {
 }
 
 //GetUserByID ...
-func GetUserByID(id uint64) Users {
-	var user Users
-	engine := getDBEngine()
-	engine.Id(id).Get(&user)
+func GetUserByID(id uint64) User {
+	var user User
+	X.Id(id).Get(&user)
 	return user
 }
 
 //PointsInDistanceRange 距离某一点给定距离内的若干个点
-func PointsInDistanceRange(p geopoints.GeoPoint, d int64) []Users {
+func PointsInDistanceRange(p geopoint.GeoPoint, d int64) []User {
 
-	list := make([]Users, 0)
+	list := make([]User, 0)
 	qStr := p.GetPointsQueryStringWithIn(d)
-	engine := getDBEngine()
-	err := engine.Where(qStr).Desc("id").Find(&list)
+	err := X.Where(qStr).Desc("id").Find(&list)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,12 +94,11 @@ func PointsInDistanceRange(p geopoints.GeoPoint, d int64) []Users {
 }
 
 // AddNewUser ...
-func AddNewUser(user *Users) uint64 {
+func AddNewUser(user *User) uint64 {
 
-	engine := getDBEngine()
+	userInDb := new(User)
 
-	userInDb := new(Users)
-	engine.Where("phone=?", user.Phone).Get(userInDb)
+	X.Where("phone=?", user.Phone).Get(userInDb)
 	//使用该手机号码的用户已存在了
 	if userInDb.Id != 0 {
 
@@ -103,8 +112,8 @@ func AddNewUser(user *Users) uint64 {
 		INSERT INTO "users" ("province_agent_id","city_agent_id","county_agent_id","name","phone","geog") VALUES ($1,$2,$3,$4,$5,$6) []interface {}{41, 371, 2, "cccd", "13800138000", "SRID=4326;POINT(113.538639 34.826563)"}
 	*/
 	//sqlStr := "INSERT INTO \"users\" (\"province_agent_id\",\"city_agent_id\",\"county_agent_id\",\"name\",\"phone\",\"geog\") VALUES ($1,$2,$3,$4,$5,$6)"
-	sqlStr := "INSERT INTO \"users\" (\"province_agent_id\",\"city_agent_id\",\"county_agent_id\",\"name\",\"phone\",\"geog\") VALUES (?,?,?,?,?,?)"
-	res, err := engine.Exec(sqlStr, int64(user.ProvinceAgentId), int64(user.CityAgentId), int64(user.CountyAgentId), user.Name, user.Phone, user.Geog)
+	sqlStr := "INSERT INTO \"user\" (\"province_agent_id\",\"city_agent_id\",\"county_agent_id\",\"name\",\"phone\",\"geog\") VALUES (?,?,?,?,?,?)"
+	res, err := X.Exec(sqlStr, int64(user.ProvinceAgentId), int64(user.CityAgentId), int64(user.CountyAgentId), user.Name, user.Phone, user.Geog)
 
 	if err != nil {
 		log.Println(err)
@@ -121,7 +130,7 @@ func AddNewUser(user *Users) uint64 {
 		log.Println("isInsertedInt64==0?")
 		return 0
 	}
-	engine.Where("phone=?", user.Phone).Get(userInDb)
+	X.Where("phone=?", user.Phone).Get(userInDb)
 	return userInDb.Id
 
 }
@@ -129,24 +138,24 @@ func AddNewUser(user *Users) uint64 {
 //GetRowIDByPhone ...
 func GetRowIDByPhone(phone string) uint64 {
 
-	user := new(Users)
-	engine := getDBEngine()
-	engine.Where("phone=?", phone).Get(user)
+	user := new(User)
+
+	X.Where("phone=?", phone).Get(user)
 	return user.Id
 
 }
 
 //DeleteUserByPhone ...
 func DeleteUserByPhone(phone string) bool {
-	user := new(Users)
-	engine := getDBEngine()
-	engine.Where("phone=?", phone).Get(user)
+	user := new(User)
+
+	X.Where("phone=?", phone).Get(user)
 	id := user.Id
 	if id == 0 {
 		log.Printf("try to delete not exists user with phone %s", phone)
 		return false
 	}
-	rows, err := engine.Delete(&user)
+	rows, err := X.Delete(&user)
 	if err != nil {
 		log.Println(err)
 		return false
@@ -157,12 +166,6 @@ func DeleteUserByPhone(phone string) bool {
 	return true
 }
 
-func UpdateUser(user *User) bool {
-
-	engine := getDBEngine()
-
-}
-
 func main() {
 	//total row in DT
 	{ //用户数量
@@ -171,8 +174,8 @@ func main() {
 	}
 
 	{ //添加新用户
-		point := geopoints.GeoPoint{Lng: 113.538639, Lat: 34.826563}
-		u1 := &Users{
+		point := geopoint.GeoPoint{Lng: 113.538639, Lat: 34.826563}
+		u1 := &User{
 			//Id:              1102,
 			ProvinceAgentId: 41,
 			CityAgentId:     371,
@@ -191,7 +194,7 @@ func main() {
 	}
 
 	{ //按照ID获取用户
-		var p2 geopoints.GeoPoint
+		var p2 geopoint.GeoPoint
 		user := GetUserByID(2)
 		fmt.Println(user)
 
@@ -207,13 +210,13 @@ func main() {
 	}
 	{ //查找某个点周围指定距离内的用户
 		//113.739873, 34.356696
-		p3 := geopoints.GeoPoint{Lng: 113.739873, Lat: 34.356696}
+		p3 := geopoint.GeoPoint{Lng: 113.739873, Lat: 34.356696}
 		ps := PointsInDistanceRange(p3, 5000)
 		psLen := len(ps)
 		if psLen > 0 {
 
 			for i := 0; i < psLen; i++ {
-				var p geopoints.GeoPoint
+				var p geopoint.GeoPoint
 				p.Scan(ps[i].Geog)
 				ps[i].Geog = p.JSONString()
 				m, err := json.Marshal(ps[i])
