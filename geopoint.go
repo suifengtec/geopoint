@@ -22,6 +22,11 @@ func (p *GeoPoint) String() string {
 	return fmt.Sprintf("SRID=4326;POINT(%v %v)", p.Lng, p.Lat)
 }
 
+//ToString  same function as String()
+func (p *GeoPoint) ToString() string {
+	return p.String()
+}
+
 //Value ...
 func (p GeoPoint) Value() (driver.Value, error) {
 	return p.String(), nil
@@ -29,6 +34,7 @@ func (p GeoPoint) Value() (driver.Value, error) {
 
 //JSONString ...
 // 从数据库查询了一条或者多条有GEO点信息的数据ps,那么,可以在循环中使用
+// Get one or more GEO points for  iteration.
 /*
 	p3 := GeoPoint{Lng: 113.739873, Lat: 34.356696}
 
@@ -97,7 +103,7 @@ func (p *GeoPoint) Scan(val string) error {
 
 //GetPointsQueryStringWithIn ...
 /*
-//PointsInDistanceRange 距离某一点给定距离内的若干个点
+//PointsInDistanceRange Get points in given distance range to GeoPoint.
 func PointsInDistanceRange(p GeoPoint, d int64) []Users {
 
 	list := make([]Users, 0)

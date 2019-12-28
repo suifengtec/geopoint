@@ -11,12 +11,12 @@ import (
 )
 
 //User Db Model
+//xorm and gorm all not support PostGIS types now,so we prefer not sync tables used PostGIS types.
+//so we do not use their datatable Sync feature.
 type User struct {
-	ID       uint64 `xorm:"pk 'id'" json:"id"`
-	Name     string `json:"name"`
-	Phone    string `json:"phone"`
-	Password string `json:"password"` //only for test!!
-	Geog     string `json:"geog"`     //xorm 以及gorm 目前尚未支持PostGIS
+	ID    uint64 `xorm:"bigint pk autoincr 'id'" json:"id"`
+	Label string `xorm:"varchar(64)" json:"label"`
+	Geog  string `xorm:"varchar(254)" json:"geog"`
 }
 
 /*
@@ -31,7 +31,21 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO geopoint_test_user;
 \c geopoint_test_db
 
 CREATE EXTENSION postgis;
+\q
+
+
 psql -d geopoint_test_db < bk.sql
+
+psql -U geopoint_test_user -d geopoint_test_db
+
+\dt
+
+//after tested,drop the test table.
+
+psql -U postgres -d geopoint_test_db
+
+DROP TABLE IF EXISTS public.user;
+\q
 
 */
 
@@ -55,22 +69,20 @@ func initDBEngine() {
 		log.Fatal(err)
 
 	}
-	e.ShowSQL(true)
+	e.ShowSQL(false)
 
-	fmt.Println("connect postgresql success")
+	fmt.Println("Connected to postgresql !")
 	X = e
 	//return e
 }
 
 //GetUserCount ...
 func GetUserCount() uint64 {
-
 	user := new(User)
 	total, err := X.Where("id >?", 1).Count(user)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
 	return uint64(total)
 }
 
@@ -81,8 +93,26 @@ func GetUserByID(id uint64) User {
 	return user
 }
 
-//PointsInDistanceRange 距离某一点给定距离内的若干个点
-func PointsInDistanceRange(p geopoint.GeoPoint, d int64) []User {
+//GetUserPtrByID ...
+func GetUserPtrByID(id uint64) *User {
+	user := new(User)
+	X.Id(id).Get(user)
+	return user
+}
+
+//GetIDByLabel ...
+func GetIDByLabel(label string) uint64 {
+	user := User{Label: label}
+	X.Where("label=?", label).Get(&user)
+
+	log.Println("==GetIDByLabel==")
+	log.Println(user)
+	return user.ID
+
+}
+
+//GetUsersInDistanceRange ...
+func GetUsersInDistanceRange(p geopoint.GeoPoint, d int64) []User {
 
 	list := make([]User, 0)
 	qStr := p.GetPointsQueryStringWithIn(d)
@@ -96,63 +126,32 @@ func PointsInDistanceRange(p geopoint.GeoPoint, d int64) []User {
 // AddNewUser ...
 func AddNewUser(user *User) uint64 {
 
-	userInDb := new(User)
+	idIfExist := GetIDByLabel(user.Label)
 
-	X.Where("phone=?", user.Phone).Get(userInDb)
-	//使用该手机号码的用户已存在了
-	if userInDb.ID != 0 {
-
-		log.Println("使用该手机号码的用户已存在了?")
-		log.Println(userInDb.ID)
-		log.Println(user.Phone)
-		return 0
+	if idIfExist > 0 {
+		log.Println("AddNewUser failed,caused by the label has be used.")
+		return uint64(0)
 	}
-
-	/*
-		INSERT INTO "users" ("province_agent_id","city_agent_id","county_agent_id","name","phone","geog") VALUES ($1,$2,$3,$4,$5,$6) []interface {}{41, 371, 2, "cccd", "13800138000", "SRID=4326;POINT(113.538639 34.826563)"}
-	*/
-	//sqlStr := "INSERT INTO \"users\" (\"province_agent_id\",\"city_agent_id\",\"county_agent_id\",\"name\",\"phone\",\"geog\") VALUES ($1,$2,$3,$4,$5,$6)"
-	sqlStr := "INSERT INTO \"user\" (\"name\",\"phone\",\"geog\") VALUES (?,?,?)"
-	res, err := X.Exec(sqlStr, user.Name, user.Phone, user.Geog)
-
+	isInsertedInt64, err := X.Insert(user)
 	if err != nil {
 		log.Println(err)
-		return 0
-	}
-	//isInsertedInt64, err := engine.Insert(user)
-	//lastInsertIDInt64, err := res.LastInsertId()
-	isInsertedInt64, err := res.RowsAffected()
-	if err != nil {
-		log.Println(err)
-		return 0
+		return uint64(0)
 	}
 	if isInsertedInt64 == 0 {
-		log.Println("isInsertedInt64==0?")
-		return 0
+		return uint64(0)
 	}
-	X.Where("phone=?", user.Phone).Get(userInDb)
-	return userInDb.ID
-
-}
-
-//GetRowIDByPhone ...
-func GetRowIDByPhone(phone string) uint64 {
-
-	user := new(User)
-
-	X.Where("phone=?", phone).Get(user)
 	return user.ID
 
 }
 
-//DeleteUserByPhone ...
-func DeleteUserByPhone(phone string) bool {
+//DeleteUserByLabel ...
+func DeleteUserByLabel(label string) bool {
 	user := new(User)
 
-	X.Where("phone=?", phone).Get(user)
+	X.Where("label=?", label).Get(user)
 	id := user.ID
 	if id == 0 {
-		log.Printf("try to delete not exists user with phone %s", phone)
+		log.Printf("try to delete not exists user with label %s", label)
 		return false
 	}
 	rows, err := X.Delete(&user)
@@ -170,46 +169,44 @@ func main() {
 
 	initDBEngine()
 	//total row in DT
-	{ //用户数量
+	{ //User Count
+		fmt.Println("==User Count==")
 		total := GetUserCount()
 		fmt.Println(total)
 	}
 
-	{ //添加新用户
+	{ //add a new User if not exist.
+		fmt.Println("The ID of the new user be added or adding user failed info.")
 		point := geopoint.GeoPoint{Lng: 113.538639, Lat: 34.826563}
 		u1 := &User{
-			Name:  "ddddd",
-			Phone: "13800138005",
-
-			Geog: point.String(),
+			Label: "13800138005",
+			Geog:  point.String(),
 		}
 		isInsertedInt64 := AddNewUser(u1)
-		fmt.Println("isInsertedInt64")
+
 		fmt.Println(isInsertedInt64)
 	}
 
-	{ //按照ID获取用户
-		var p2 geopoint.GeoPoint
+	{ //fetch a user by ID
+		fmt.Println("==Scan Geopoint data in db to raw string==")
+		var p geopoint.GeoPoint
 		user := GetUserByID(2)
 		fmt.Println(user)
-
-		//p2.Scan([]uint8(user.Geog))
-		p2.Scan(user.Geog)
-		fmt.Println(p2.String())
+		p.Scan(user.Geog)
+		fmt.Println(p.String())
 
 	}
-	{ //按照phone获取用户
-		theID := GetRowIDByPhone("13800138000")
-
-		fmt.Println(theID)
+	{ //fetch user ID by label
+		theID := GetIDByLabel("13800138000")
+		fmt.Println("The ID of fetched user by label", theID)
 	}
-	{ //查找某个点周围指定距离内的用户
+	{ //find some users in a given distance range.
+		fmt.Println("==Users in 5000 meters by geopoint.GeoPoint{Lng: 113.739873, Lat: 34.356696}==")
 		//113.739873, 34.356696
-		p3 := geopoint.GeoPoint{Lng: 113.739873, Lat: 34.356696}
-		ps := PointsInDistanceRange(p3, 5000)
+		p := geopoint.GeoPoint{Lng: 113.739873, Lat: 34.356696}
+		ps := GetUsersInDistanceRange(p, 5000)
 		psLen := len(ps)
 		if psLen > 0 {
-
 			for i := 0; i < psLen; i++ {
 				var p geopoint.GeoPoint
 				p.Scan(ps[i].Geog)
