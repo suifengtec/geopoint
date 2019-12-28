@@ -100,10 +100,10 @@ func AddNewUser(user *User) uint64 {
 
 	X.Where("phone=?", user.Phone).Get(userInDb)
 	//使用该手机号码的用户已存在了
-	if userInDb.Id != 0 {
+	if userInDb.ID != 0 {
 
 		log.Println("使用该手机号码的用户已存在了?")
-		log.Println(userInDb.Id)
+		log.Println(userInDb.ID)
 		log.Println(user.Phone)
 		return 0
 	}
@@ -112,8 +112,8 @@ func AddNewUser(user *User) uint64 {
 		INSERT INTO "users" ("province_agent_id","city_agent_id","county_agent_id","name","phone","geog") VALUES ($1,$2,$3,$4,$5,$6) []interface {}{41, 371, 2, "cccd", "13800138000", "SRID=4326;POINT(113.538639 34.826563)"}
 	*/
 	//sqlStr := "INSERT INTO \"users\" (\"province_agent_id\",\"city_agent_id\",\"county_agent_id\",\"name\",\"phone\",\"geog\") VALUES ($1,$2,$3,$4,$5,$6)"
-	sqlStr := "INSERT INTO \"user\" (\"province_agent_id\",\"city_agent_id\",\"county_agent_id\",\"name\",\"phone\",\"geog\") VALUES (?,?,?,?,?,?)"
-	res, err := X.Exec(sqlStr, int64(user.ProvinceAgentId), int64(user.CityAgentId), int64(user.CountyAgentId), user.Name, user.Phone, user.Geog)
+	sqlStr := "INSERT INTO \"user\" (\"name\",\"phone\",\"geog\") VALUES (?,?,?)"
+	res, err := X.Exec(sqlStr, user.Name, user.Phone, user.Geog)
 
 	if err != nil {
 		log.Println(err)
@@ -141,7 +141,7 @@ func GetRowIDByPhone(phone string) uint64 {
 	user := new(User)
 
 	X.Where("phone=?", phone).Get(user)
-	return user.Id
+	return user.ID
 
 }
 
@@ -150,7 +150,7 @@ func DeleteUserByPhone(phone string) bool {
 	user := new(User)
 
 	X.Where("phone=?", phone).Get(user)
-	id := user.Id
+	id := user.ID
 	if id == 0 {
 		log.Printf("try to delete not exists user with phone %s", phone)
 		return false
@@ -176,17 +176,10 @@ func main() {
 	{ //添加新用户
 		point := geopoint.GeoPoint{Lng: 113.538639, Lat: 34.826563}
 		u1 := &User{
-			//Id:              1102,
-			ProvinceAgentId: 41,
-			CityAgentId:     371,
-			CountyAgentId:   2,
-			Name:            "ddddd",
-			Phone:           "13800138005",
-			BizLevel:        2,
-			Role:            100,
-			RefType:         1,
-			RefId:           0,
-			Geog:            point.String(),
+			Name:  "ddddd",
+			Phone: "13800138005",
+
+			Geog: point.String(),
 		}
 		isInsertedInt64 := AddNewUser(u1)
 		fmt.Println("isInsertedInt64")
