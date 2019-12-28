@@ -55,3 +55,7 @@ func GetUsersInDistanceRange(p geopoint.GeoPoint, d int64) []User {
 }
 
 ```
+
+## Learn more
+
+[doc on godoc.org](https://godoc.org/github.com/suifengtec/geopoint)
