@@ -135,7 +135,7 @@ func AddNewUser(user *User) uint64 {
 		return 0
 	}
 	X.Where("phone=?", user.Phone).Get(userInDb)
-	return userInDb.Id
+	return userInDb.ID
 
 }
 
