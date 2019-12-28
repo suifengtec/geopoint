@@ -77,8 +77,9 @@ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
-github.com/suifengtec/geopoint v0.0.0-20191228165208-e17064079874 h1:hb7s6DwTZLDBVbx8VDi9ZcH0TLPaVePnaPMKRaPgwps=
 github.com/suifengtec/geopoint v0.0.0-20191228165208-e17064079874/go.mod h1:UlusKs1gMHCBh8otzYPPrq3eUsK9VYcFDODOWUUOfZ4=
+github.com/suifengtec/geopoint v1.0.0 h1:4t2tCYw6nuTzCveCX8Hnm+SCK0OUilr1fsEEtqpuHMk=
+github.com/suifengtec/geopoint v1.0.0/go.mod h1:UlusKs1gMHCBh8otzYPPrq3eUsK9VYcFDODOWUUOfZ4=
 github.com/ziutek/mymysql v1.5.4/go.mod h1:LMSpPZ6DbqWFxNCHW77HeMg9I646SAhApZ/wKdgO/C0=
 go.opencensus.io v0.20.1/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
