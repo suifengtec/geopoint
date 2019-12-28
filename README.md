@@ -1,12 +1,13 @@
-# go-postgis-points
-go-postgis-points
+# geopoint
+
+geopoint
 
 ## Usage
 
 setup:
 
 ```bash
-go get github.com/suifengtec/go-postgis-points
+go get github.com/suifengtec/geopoint
 
 ```
 
@@ -16,9 +17,8 @@ import:
 
 import(
 
-    geopoints "github.com/suifengtec/go-postgis-points"
+    "github.com/suifengtec/geopoint"
 )
 
 //....
 ```
-
